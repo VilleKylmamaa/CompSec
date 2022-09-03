@@ -67,13 +67,36 @@ Grade 1 can be acquired by doing mini exam for the corresponding week.
 
 **Provide the command line you used to do this.**
 
+Command:
+
+`Fuzztest 1337 | radamsa -n10`
+
+Output:
+
+![image](https://user-images.githubusercontent.com/71127573/188275955-c1689349-c5a1-4fa5-aa37-ba0047424584.png)
+
+
 Radamsa can also handle various types of files. Next, you have to generate a bunch of *.txt* test samples for later usage. 
 
 **B)** Create a *.txt* file that contains only the text ```12 EF``` and nothing more. Use Radamsa to generate 100 fuzzed samples of the file that are named ```fuzz1.txt```, ```fuzz2.txt```, ```fuzz3.txt```... etc. You should create a separate folder for the samples.
 
 **Provide the content of 2 different samples that radamsa created**
 
+Output:
+
+![image](https://user-images.githubusercontent.com/71127573/188276480-24324e30-e649-41cb-900d-8def117b8733.png)
+
+![image](https://user-images.githubusercontent.com/71127573/188276518-726a2ec4-e57c-4e02-b655-0d5e84d9dcf8.png)
+
+![image](https://user-images.githubusercontent.com/71127573/188276569-72fa2bea-1b8c-4106-80a1-e91dbf194670.png)
+
+
 **Command line used to create the samples**
+
+Command:
+
+`Fuzztest 1337 | radamsa -n10`
+
 
 ---
 
