@@ -95,7 +95,7 @@ Output:
 
 Command:
 
-`Fuzztest 1337 | radamsa -n10`
+`radamsa fuzz.txt -o fuzz&n.txt -n 100`
 
 
 ---
