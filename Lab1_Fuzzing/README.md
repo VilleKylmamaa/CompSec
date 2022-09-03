@@ -95,7 +95,7 @@ Output:
 
 Command:
 
-`radamsa fuzz.txt -o fuzz&n.txt -n 100`
+`radamsa fuzz.txt -o fuzz%n.txt -n 100`
 
 
 ---
