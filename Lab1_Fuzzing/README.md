@@ -100,6 +100,8 @@ Command:
 
 ---
 
+
+
 ## Task 2 
 
 ### A) Analyzing C program with AddressSanitizer
@@ -108,9 +110,22 @@ This repository contains an example C program called [example.c](misc/example.c)
 
 **Command line used to compile the program**
 
+`clang -fsanitize=address -01 -fno-omit-frame-pointer -g example.c`
+
+
 **Screenshot of the result after running the program**
 
+![image](https://user-images.githubusercontent.com/71127573/188279289-d1c67770-9087-4176-9a59-e75d839f7ff6.png)
+
+
 **What is the error and what is causing it in this program?**
+
+`ERROR: LeakSanitizer: detected memory leaks`
+
+The error is that there is a memory leak. Memory is allocated to the buffer: `char * buffer = malloc(1024);` but it is never deallocated.
+
+The error could be fixed by deallocating the memory before finishing the program with: `free(buffer);`. With this addition AddressSanitizer no longer gives the error. 
+
 
 ---
 ### B) Fuzzing with AFL
