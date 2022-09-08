@@ -175,11 +175,23 @@ So, here's what you need to do:
 
 **Command line used to configure unrtf**
 
+`./configure CC=afl-gcc --prefix=$HOME/unrtf`
+
+
 **Command line used to run AFL**
+
+afl-fuzz -i ./inputterino -o ./outputteroni ~/unrtf/bin/unrtf
+
 
 **Screenshot of the AFL status screen after stopping the fuzzer**
 
+![Screenshot 2022-09-08 082722](https://user-images.githubusercontent.com/71127573/189041592-ba060df2-f973-4847-b718-dfefabc9befd.png)
+
+
+
 **What do you think are the most significant pieces of information on the status screen? Why are they important?**
+
+
 
 ---
 ### C) Reproducing crashes with Valgrind
