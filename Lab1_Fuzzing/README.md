@@ -185,7 +185,8 @@ afl-fuzz -i ./inputterino -o ./outputteroni ~/unrtf/bin/unrtf
 
 **Screenshot of the AFL status screen after stopping the fuzzer**
 
-![Screenshot 2022-09-08 082722](https://user-images.githubusercontent.com/71127573/189041592-ba060df2-f973-4847-b718-dfefabc9befd.png)
+![after-abort](https://user-images.githubusercontent.com/71127573/189041831-41fd99d3-572f-401b-a09d-e0f799c02c69.png)
+
 
 
 
