@@ -180,7 +180,7 @@ So, here's what you need to do:
 
 **Command line used to run AFL**
 
-afl-fuzz -i ./inputterino -o ./outputteroni ~/unrtf/bin/unrtf
+`afl-fuzz -i ./inputterino -o ./outputteroni ~/unrtf/bin/unrtf`
 
 
 **Screenshot of the AFL status screen after stopping the fuzzer**
@@ -189,8 +189,11 @@ afl-fuzz -i ./inputterino -o ./outputteroni ~/unrtf/bin/unrtf
 
 
 
-
 **What do you think are the most significant pieces of information on the status screen? Why are they important?**
+
+I think saved crashes, i.e. unique crashes, is usually the most important piece of information. There were 51 unique crashes out of 45.5k total in my 9min and 48sec long test. That's 51 interesting cases to study the cause of.
+
+Process timing and cycle progress can be used to figure out how long fuzzing cycles last, i.e. do you need to run the fuzzing for an hour or a whole day for example. Map coverage can inform you if the fuzzing is not very effective: "Be wary of extremes" according to the AFL documentation. Stability in the path geometry section is important if it is showing too low of a percentage. Other than that, it mostly seems extra information for nerds, as the AFL documentation puts it.
 
 
 
@@ -207,9 +210,26 @@ Run UnRTF with this file under Valgrind:
 
 __Hint__: Make sure that you are actually running the UnRTF with a crash file! If you get "Error: Cannot open input file" before Valgrind's actual memory analysis output, you are trying to run the program without any input. See the Valgrind [documentation](http://valgrind.org/docs/manual/quick-start.html) for help.
 
+
+
 **Take a screenshot of the Valgrind result after running the program**
 
+![image](https://user-images.githubusercontent.com/71127573/189528442-579b7ad4-6d45-4bec-96c1-bf50bd816ad9.png)
+
+The file does not have a `.rtf` suffix but the system identifies it as an `.rtf` file.
+
+
+
 **What can you tell about the crash?**
+
+The error points to line 212 in hash.c (`hash_get_string` function):
+
+![image](https://user-images.githubusercontent.com/71127573/189529194-0ed44d2c-2c54-4b3c-8022-f20ccf788b5c.png)
+
+The error also reads "Address 0x11 is not stack'd, malloc'd or (recently) free'd" which would imply a null pointer dereference. It could be fixed by checking for the null pointer.
+
+
+
 
 ---
 
@@ -227,9 +247,88 @@ Compile and link your program with AddressSanitizer using appropriate flags.
 
 Run your program with the previously generated 100 test cases. A simple shell script loop, for example, is an easy way to run the test cases. If you don't get enough ASAN outputs with the 100 test cases, try to do the test with 1 000 or 10 000 malformed inputs.
 
+
+
 **Provide the C-code of your program**
 
+Specifications asked to check if second token is not a string. I think the specification is unclear because the characters read from a text file will always be a string even if it's all numbers. I added a check that the second token is not all numbers but it's unclear if this is what was meant by the specification.
+
+```C
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+int main(int argc, char *argv[]) {
+    FILE *fp;
+    char *filename;
+    char ch;
+
+    filename = argv[1];
+    fp = fopen(filename, "r");
+    char input[99999];
+
+    while ( (ch = fgetc(fp)) != EOF ) {
+        strncat(input, &ch, 1);
+    }
+    printf("Input: %s\n", input);
+
+    char *token;
+    token = strtok(input, " ");
+
+    // Allow negative numbers
+    if ( token != NULL && token[0] == '-' ) {
+        token++; // Skip first char in the following isdigit check
+    }
+    if ( token != NULL && isdigit(*token) == 0 ) {
+        printf("First token is not an integer - return 0\n\n");
+        return(0);
+    }
+
+    int segmentCount = 0;
+    while( token != NULL ) {
+        segmentCount++;
+        if (segmentCount > 2) {
+            printf("Token count is over 2 - return 0\n\n");
+            return(0);
+        }
+
+        token = strtok(NULL, " ");
+        if ( token != NULL && isdigit(*token) != 0 ) {
+            printf("Second token is not a string - return 0\n\n");
+            return(0);
+        }
+    }
+    if ( segmentCount < 2 ) {
+        printf("Token count is less than 2 - return 0\n\n");
+        return(0);
+    }
+
+    printf("All tests pass - return 1\n\n");
+    return(1);
+}
+```
+
+
+
 **Take a screenshot of the AddressSanitizer results after running your program with the test cases. Show at least 3 ASAN outputs.**
+
+These are the only type of errors I get:
+
+ASan error 1:
+
+![image](https://user-images.githubusercontent.com/71127573/189544690-6b5f8617-26a1-4b3c-b459-2abfee382521.png)
+
+
+ASan error 2:
+
+![image](https://user-images.githubusercontent.com/71127573/189544905-b904c5b8-652a-4f0c-84c6-69f06230f305.png)
+
+
+ASan error 3:
+
+![image](https://user-images.githubusercontent.com/71127573/189544929-b0b25ac5-ef2e-46e1-b59e-e1a8adb5ebd2.png)
+
+
 
 ---
 
@@ -271,11 +370,36 @@ Your task is to do the following:
     ```
     This command can also be used to convert ```clienthello``` to *.pcap*.
 
+
+
 **What is the more widely recognized name for this CVE-2014-0160 vulnerability?**
+
+The "Heartbleed" vulnerability.
+
+
 
 **What can you tell about the crash based on ASAN results and the pcap file? What is causing the vulnerability?**
 
+The bug is caused by the sent heartbeat request in which the payload length of the request does **not** match the length of the actual data sent. As the length of the payload is longer, the server would then respond with enough data to match the payload's length beyond the intended length of just the message. This would send unintended data from the server's memory to the requester.
+
+ASAN identified this as a heap-buffer-overflow, pointing to `#1 0x4d4b50 in tls1_process_heartbeat /home/kali/Desktop/lab1/task4/openssl/ssl/t1_lib.c:2586:3`. The pcap file has the smarts to red out the payload length:
+
+![image](https://user-images.githubusercontent.com/71127573/189699907-28e0aef8-666f-4dfc-8fde-2cb78357b0df.png)
+
+The bug happens in the file `./openssl/ssl/t1_lib.c` in function `tls1_process_heartbeat`. The length of the payload is read from the request on line 2563: `n2s(p, payload);` and the response to be sent back is copied from the memory using the payload's length on line 2586: `memcpy(bp, pl, payload);`.
+
+![image](https://user-images.githubusercontent.com/71127573/189701406-2e5f9810-944e-4235-bb26-aa8500730c95.png)
+
+
+
 **Take a screenshot of the AFL/ASAN results**
+
+![image](https://user-images.githubusercontent.com/71127573/189702223-59d8dc87-9be3-48a0-8523-b074566b23dc.png)
+
+![image](https://user-images.githubusercontent.com/71127573/189672853-0e850398-b802-4cf7-8bf6-a265d0d9ac2f.png)
+
+
+
 
 ---
 
