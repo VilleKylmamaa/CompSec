@@ -170,11 +170,32 @@ Use your browser's developer tools to edit and resend this request, and cause an
 The GET request is sent to http://localhost:3000/rest/products/search?q=. Try different SQL symbols like statement terminators, comments and quotation marks. Check the network tab for the server's response.
 </details>
 
+![image](https://user-images.githubusercontent.com/71127573/190251724-6a66e81d-83ca-4c0b-bf5e-ca394497c4a0.png)
+
 __What did you use as the search argument to cause an error?__
+
+```sql
+'rip
+```
+
+Full URL:
+```
+http://localhost:3000/rest/products/search?q='rip
+```
 
 __Why did it cause an error?__
  
+In SQL, the `' '` brackets is what is used to enclose variables. By adding the `'` symbol into the search argument, there are now too many brackets in the query which causes an error. `rip` is just whatever string.
+ 
 __Paste here the command that the SQL server attempts to execute and replace the part(s) taken from the search field with the text "SEARCHRESULT".__ 
+
+```sql
+SELECT * FROM Products WHERE ((name LIKE '%SEARCHRESULT%' OR description LIKE '%SEARCHRESULT%') AND deletedAt IS NULL) ORDER BY name
+```
+
+From Zap:
+
+![image](https://user-images.githubusercontent.com/71127573/190476773-f72b475a-9596-4b25-8973-bf38eb7110be.png)
 
 ---
 
@@ -189,10 +210,36 @@ Examine the SQL query that the server returned in the last part. How does this q
 
 __How are the items "deleted"?__
 
+The items have a `deletedAt` column in the database. The SQL query excludes items which have a value set to this column, it has to be NULL for the query to include the items (`... AND deletedAt IS NULL ...`).
+
 __How did you make the server return all the items?__
- 
+
+I entered the URL:
+
+```
+http://localhost:3000/rest/products/search?q=')) ORDER BY deletedAt desc;--
+```
+
+So the query parameter in the request sent is:
+
+```
+')) ORDER BY deletedAt desc--
+```
 
 __Explain shortly the logic behind your attack. Why does it work?__
+
+By entering the URL above, the SQL query sent to the server becomes:
+
+```sql
+SELECT * FROM Products WHERE ((name LIKE '%')) ORDER BY deletedAt desc--%' OR description LIKE '%'))ORDER BY deletedAt desc--%') AND deletedAt IS NULL) ORDER BY name
+```
+
+The key part is the SQL comment `--` which cuts out the rest of the query, cutting out the part which excludes items based on the `deletedAt` value. The `))` part is needed to fix the parentheses after they get broken by commenting out the rest of the query. `LIKE '%'` includes all.
+
+The `ORDER BY deletedAt desc` part is just to sort the deleted items neatly at the top, like so:
+
+![image](https://user-images.githubusercontent.com/71127573/190480200-bc85d13c-138f-4059-966f-ce374c9be753.png)
+
 
 ---
 
@@ -204,9 +251,26 @@ Inject some SQL into the login fields, [bypass the login](https://www.acunetix.c
 
 __What command(s) did you use?__
 
+I invoked an error with just `'` in the email and password fields to find the SQL that's being run on the server:
+
+![image](https://user-images.githubusercontent.com/71127573/190482656-5daa4894-5a3c-4c89-aea0-6e1b1710dabd.png)
+
+Then I logged in as admin with the following input in the email field:
+
+```sql
+' OR 1=1 --
+```
+
+
 __Why it is working/what is happening?__
 
+SQL comment `--` is again used to comment out the rest of the query. `1=1` is always true, and adding this to the `WHERE` clause with `OR` makes the query return all the users despite the email not matching or the password completely missing from the query.
+
+
 __What user did you login as?__
+
+The admin. Looks like bypassing the credentials logs in as the first entry in the database which happens to be the admin account with id of 1.
+
 
 
 ---
@@ -223,6 +287,25 @@ Firefox's developer tools has a debugger that shows sources. Try to find the pat
 
 __How did you find the path?__
 
+
+I found the `main.js` source file with dev tools debugger and searched for `score` until I found an obvious router link:
+
+```
+['mat-button',
+''],
+[
+  'routerLink',
+  '/score-board'
+]
+```
+
+![image](https://user-images.githubusercontent.com/71127573/190490930-1b24a7a9-4bcb-491c-8df5-156d48128ba9.png)
+
+![image](https://user-images.githubusercontent.com/71127573/190554982-eba0d522-3b61-4977-8cf9-8d703f7a6c49.png)
+
+
+
+
 ---
 
 **Administration panel**
@@ -235,6 +318,16 @@ Check task 'Scoreboard'. You have to be logged in as the admin to access the pag
 </details>
 
 __What is the administration panel's URL?__
+
+```
+http://localhost:3000/#/administration
+```
+
+Found the same way as the scoreboard.
+
+![image](https://user-images.githubusercontent.com/71127573/190492352-e66d5e4b-e381-47ba-9e93-4feee6788aea.png)
+
+
 
 ---
 ### XSS attacks
@@ -250,6 +343,14 @@ Next, we attempt some cross-site scripting attacks. While you are logged in as a
 Attack on the "Order ID" is an [reflected XSS attack](https://www.owasp.org/index.php/Cross-site_Scripting_(XSS)#Reflected_XSS_Attacks) and the attack on the searchfield is [DOM based XSS](https://www.owasp.org/index.php/DOM_Based_XSS).
 
 __What is the difference between these two types of attacks?__
+
+![image](https://user-images.githubusercontent.com/71127573/190492731-d9c3ebb7-562b-42b1-9579-81ad7b04f944.png)
+
+In the search field it is a DOM-based XSS attack, and in the track orders tab it is a reflected XSS attack. The difference is that DOM-based XSS attack is executed on the client side (browser), while the reflected XSS attack gets echoed back by the server. The DOM-based XSS itself does not directly send a request to the server and as such is usually harder to notice.
+
+The main way to protect against both types of attacks is properly validating **all** user inputs on **both** client and server side. Essentially employ zero trust security model where you treat all inputs as compromised by default. Allow only known good and acceptable inputs. Disallow, remove or escape key characters like `<` and `>` used in script and html tags.
+
+
 
 ---
 
@@ -279,6 +380,12 @@ We can find out the type of packet we need in the following way:
 After this, log in as the administrator and go to the administration panel. You should be welcomed by an alert popup and the administration panel should have a weird-looking user entry.
 
 __How can you protect your applications against XSS attacks?__
+
+The main way to protect against both types of attacks is properly validating **all** user inputs on **both** client and server side. Essentially employ zero trust security model where you treat all inputs as compromised by default. Allow only known good and acceptable inputs. Disallow, remove or escape key characters like `<` and `>` used in script and html tags.
+
+![image](https://user-images.githubusercontent.com/71127573/190557978-dfa1f87d-2f33-4aaf-b446-b54f73f5464f.png)
+
+
 
 ---
 
