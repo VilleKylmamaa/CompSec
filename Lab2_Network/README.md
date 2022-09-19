@@ -465,6 +465,8 @@ If your modified HTML doesn't show up on the site, try to restart apache2.
 * index.html
 
 
+This is all the content of the `index.html`:
+
 ``` html
 <form action="http://localhost:3000/profile" method="POST">
   <input type="hidden" name="username" value="compsec"/>
